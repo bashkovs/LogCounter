@@ -22,7 +22,7 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/recognize", methods=["POST", "GET"])
+@app.route("/recognize", methods=["POST"])
 def recognize():
     if request.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
         return Response(mimetype="application/json", status=400)
@@ -48,4 +48,4 @@ def healthcheck():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5005, debug=False)
+    app.run(host="0.0.0.0", port=FLASK_PORT, debug=FLASK_DEBUG)
