@@ -1,13 +1,14 @@
-import json
+import io
 import traceback
 
-from config import *
+import gradio as gr
+from fastapi import FastAPI, File, UploadFile, HTTPException
 
-from flask import Flask, Response, request, render_template
+from config import *
 from models.detector import YoloDetector
 from PIL import Image
 
-app = Flask("LogCounter-api")
+app = FastAPI()
 detector = YoloDetector(
     model_weights_path=MODEL_PATH,
     confidence_threshold=YOLO_CONF_THRESHOLD,
@@ -16,36 +17,25 @@ detector = YoloDetector(
 )
 
 
-@app.route("/")
-def index():
-    # There will be a web form here to test the model from the browser
-    return render_template("index.html")
-
-
-@app.route("/recognize", methods=["POST"])
-def recognize():
-    if request.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
-        return Response(mimetype="application/json", status=400)
-
-    img_as_byte = request.data
-
+@app.post("/recognize")
+async def recognize(image: UploadFile = File(...)):
     try:
-        pass
-        process_result = detector.predict(img_as_byte)
+        image_stream = io.BytesIO(image.file.read())
+        image = Image.open(image_stream)
+        process_result = detector.predict(image=image)
     except Exception as e:
-        return Response(
-            json.dumps({"error": str(e), "traceback": traceback.format_exc()}),
-            mimetype="application/json",
-            status=500,
+        raise HTTPException(
+            status_code=500,
+            detail={"error": str(e), "traceback": traceback.format_exc()},
         )
-    result = json.dumps(process_result)
-    return Response(result, mimetype="application/json", status=200)
+
+    return process_result
 
 
-@app.route("/healthcheck")
-def healthcheck():
-    return Response(status=200)
+@app.get("/healthcheck")
+async def healthcheck():
+    return {"status": "ok"}
 
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=FLASK_PORT, debug=FLASK_DEBUG)
+demo = gr.Interface(detector.predict, gr.Image(), "text")
+app = gr.mount_gradio_app(app, demo, path="/")
