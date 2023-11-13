@@ -1,4 +1,5 @@
 import io
+import json
 
 from typing import Dict
 
@@ -27,9 +28,11 @@ class YoloDetector:
         self.iou_threshold = iou_threshold
         self.draw_contours = draw_contours
 
-    def predict(self, image: bytes) -> Dict:
-        image_stream = io.BytesIO(image)
-        image = Image.open(image_stream)
+    def predict(self, image: bytes, return_image: bool = False) -> Dict:
+        # print(type(image))
+        if type(image) == bytes:
+            image_stream = io.BytesIO(image)
+            image = Image.open(image_stream)
 
         result = self.model(
             image,
@@ -41,7 +44,10 @@ class YoloDetector:
 
         detections = sv.Detections.from_ultralytics(result)
         detections = self.sorting_detections(detections=detections)
-        return self.formatting_response(detections)
+        if return_image:
+            return self.annotate_image(image=np.array(image), detections=detections)
+        else:
+            return self.formatting_response(detections)
 
     def formatting_response(self, detections: sv.Detections) -> Dict:
         response = {}
@@ -49,26 +55,17 @@ class YoloDetector:
 
         converted_detections = {}
         for id, xyxy in enumerate(detections.xyxy):
-            xyxyxyxy = (
-                np.array(
-                    [
-                        xyxy[0],
-                        xyxy[1],
-                        xyxy[2],
-                        xyxy[1],
-                        xyxy[0],
-                        xyxy[3],
-                        xyxy[2],
-                        xyxy[3],
-                    ]
-                )
-                .reshape((4, 2))
-                .tolist()
-            )
+            xyxy = [int(coord) for coord in xyxy]
+            xyxyxyxy = [
+                [xyxy[0], xyxy[1]],
+                [xyxy[2], xyxy[1]],
+                [xyxy[0], xyxy[3]],
+                [xyxy[2], xyxy[3]],
+            ]
             converted_detections[id] = xyxyxyxy
 
         response["detections"] = converted_detections
-        return response
+        return json.dumps(response)
 
     def sorting_detections(self, detections: sv.Detections) -> sv.Detections:
         top_left_corners = detections.xyxy[:, :2]
@@ -76,9 +73,7 @@ class YoloDetector:
         detections.xyxy = detections.xyxy[sorted_indices]
         return detections
 
-    def annotate_image(
-        self, image: np.ndarray, detections: sv.Detections
-    ) -> np.ndarray:
+    def annotate_image(self, image: np.ndarray, detections: sv.Detections) -> bytes:
         if self.draw_contours:
             annotated_image = self.box_annotator.annotate(
                 scene=image.copy(), detections=detections, skip_label=True
@@ -103,8 +98,8 @@ class YoloDetector:
                 text_padding=5,
                 background_color=COLORS.colors[5],
             )
-
-        return annotated_image
+        # print(type(annotated_image.tobytes()))
+        return annotated_image.tobytes()
 
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
-flask==3.0.0
+fastapi==0.104.1
 ultralytics==8.0.208
 supervision==0.16.0
+gdown
+gradio==4.2.0
