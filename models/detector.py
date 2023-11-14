@@ -28,12 +28,7 @@ class YoloDetector:
         self.iou_threshold = iou_threshold
         self.draw_contours = draw_contours
 
-    def predict(self, image: bytes, return_image: bool = False) -> Dict:
-        # print(type(image))
-        if type(image) == bytes:
-            image_stream = io.BytesIO(image)
-            image = Image.open(image_stream)
-
+    def predict(self, image: Image, demo: bool = False) -> Dict:
         result = self.model(
             image,
             verbose=False,
@@ -44,8 +39,11 @@ class YoloDetector:
 
         detections = sv.Detections.from_ultralytics(result)
         detections = self.sorting_detections(detections=detections)
-        if return_image:
-            return self.annotate_image(image=np.array(image), detections=detections)
+
+        if demo:
+            return self.annotate_image(
+                image=np.array(image), detections=detections
+            ), self.formatting_response(detections)
         else:
             return self.formatting_response(detections)
 
@@ -82,9 +80,12 @@ class YoloDetector:
             annotated_image = image.copy()
 
         for id, xyxy in enumerate(detections.xyxy):
-            xyxyxyxy = np.array(
-                [xyxy[0], xyxy[1], xyxy[2], xyxy[1], xyxy[0], xyxy[3], xyxy[2], xyxy[3]]
-            ).reshape((4, 2))
+            xyxyxyxy = [
+                [xyxy[0], xyxy[1]],
+                [xyxy[2], xyxy[1]],
+                [xyxy[0], xyxy[3]],
+                [xyxy[2], xyxy[3]],
+            ]
 
             polygon_center = sv.get_polygon_center(polygon=xyxyxyxy)
             text_anchor = sv.Point(x=polygon_center.x, y=polygon_center.y)
@@ -98,15 +99,4 @@ class YoloDetector:
                 text_padding=5,
                 background_color=COLORS.colors[5],
             )
-        # print(type(annotated_image.tobytes()))
-        return annotated_image.tobytes()
-
-
-if __name__ == "__main__":
-    from PIL import Image
-
-    img_path = "test_image.jpeg"
-    model = YoloDetector("../weights/best_yolov8m.pt")
-    image = open(img_path, "rb").read()
-    response = model.predict(image)
-    print(response)
+        return annotated_image
