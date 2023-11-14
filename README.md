@@ -22,18 +22,13 @@ This api service allows you to count the number of wooden logs in the input imag
     cd LogCounter
     ```
 
-- download model weigts files
-
-    ```bash
-    bash ./get_weights.sh
-    ```
-
 - [optional] setup python environment, activate it and install required dependencies
 
     ```bash
     python3 -m venv venv
     source venv/bin/activate
     pip install -r requirements.txt
+    bash get_weights.sh
     ```
 
 - or build docker container
@@ -45,7 +40,7 @@ This api service allows you to count the number of wooden logs in the input imag
 ## ⚙️ run
 
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 5005 --reload
+uvicorn main:app --host 0.0.0.0 --port 5005
 ```
 or start docker container
 
@@ -62,9 +57,9 @@ python check_worker.py
 
 routers of service
 ```python
-@app.route("/")                             # mini-webUI in future
-@app.route("/recognize", methods=["POST"])  # recognize image (image bytes)
-@app.route("/healthcheck")                  # service health check
+@app.get("/")                   # Gradio-demo UI
+@app.post("/recognize/")        # recognize image (image bytes)
+@app.get("/healthcheck/")       # service health check
 ```
 
 example of server response
@@ -92,7 +87,7 @@ example of server response
 </div>
 
 ## 🔮 in future
-- mini web-ui interface for visual interaction with the model
+- [done] mini web-ui interface for visual interaction with the model
 - [done] visual sorting of contours for easy viewing
 - some little fixes
 

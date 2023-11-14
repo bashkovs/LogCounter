@@ -1,5 +1,5 @@
 fastapi==0.104.1
 ultralytics==8.0.208
 supervision==0.16.0
-gdown
+gdown==4.7.1
 gradio==4.2.0
